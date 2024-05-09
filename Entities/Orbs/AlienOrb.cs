@@ -1,26 +1,34 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using NNN.Systems;
 
-namespace DirtBox.Entities.Orbs
+namespace NNN.Entities.Orbs;
+
+public class AlienOrb : BaseOrb
 {
-    public class AlienOrb : BaseOrb
+    public AlienOrb(Texture2D texture, Vector2 initialPosition, Rectangle bounds, EventBus eventBus)
+        : base(texture, initialPosition, bounds, eventBus)
     {
-        public AlienOrb(Texture2D texture, Vector2 initialPosition)
-            : base(texture, initialPosition)
-        {
-            // Additional properties specific to AlienOrb
-        }
+    }
 
-        public override void Update(GameTime gameTime)
-        {
-            // AI behavior logic here
-            base.Update(gameTime);
-        }
+    public int KnowledgeScore { get; set; }
 
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            // Optionally, customize the drawing for AlienOrb
-            base.Draw(spriteBatch);
-        }
+    public override void Update(GameTime gameTime)
+    {
+        base.Update(gameTime, new Vector2());
+    }
+
+    public override bool Intersects(ICollidable entity)
+    {
+        if (!base.Intersects(entity))
+            return false;
+
+        if (entity is not KnowledgeOrb orb)
+            return true;
+
+        KnowledgeScore++;
+        orb.Destroy();
+
+        return true;
     }
 }

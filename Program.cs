@@ -1,3 +1,4 @@
-﻿
-using var game = new DirtBox.Game1();
+﻿using NNN;
+
+using var game = new NeuralNexusNebula();
 game.Run();

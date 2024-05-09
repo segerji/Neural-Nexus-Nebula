@@ -1,63 +1,69 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
+using NNN.Systems;
 
-namespace DirtBox.Entities.Orbs
+namespace NNN.Entities.Orbs;
+
+public class PlayerOrb : AlienOrb
 {
-    public class PlayerOrb : BaseOrb
+    private const int DeadZone = 4096;
+
+    public PlayerOrb(Texture2D texture, Vector2 initialPosition, float speed, Rectangle bounds, EventBus eventBus)
+        : base(texture, initialPosition, bounds, eventBus)
     {
-        public float Speed { get; set; }
-        private const int DeadZone = 4096;
+        Speed = speed;
+    }
 
-        public PlayerOrb(Texture2D texture, Vector2 initialPosition, float speed)
-            : base(texture, initialPosition)
+    public float Speed { get; set; }
+
+    public override void Update(GameTime gameTime)
+    {
+        var movementVector = CalculateMovement();
+        base.Update(gameTime, movementVector);
+    }
+
+    private Vector2 CalculateMovement()
+    {
+        var keyboardState = Keyboard.GetState();
+
+        var totalMovementX = 0f;
+        var totalMovementY = 0f;
+
+        if (keyboardState.IsKeyDown(Keys.Up))
+            totalMovementY -= 1f;
+
+        if (keyboardState.IsKeyDown(Keys.Down))
+            totalMovementY += 1f;
+
+        if (keyboardState.IsKeyDown(Keys.Left))
+            totalMovementX -= 1f;
+
+        if (keyboardState.IsKeyDown(Keys.Right))
+            totalMovementX += 1f;
+
+        var jState = Joystick.GetState((int)PlayerIndex.One);
+
+        var axisX = jState.Axes[0] / 32768f;
+        var axisY = jState.Axes[1] / 32768f;
+
+        if (Math.Abs(axisY) > DeadZone / 32768f) totalMovementY += axisY;
+
+        if (Math.Abs(axisX) > DeadZone / 32768f) totalMovementX += axisX;
+
+        // Normalize the total movement vector
+        var totalMovementLength = (float)Math.Sqrt(totalMovementX * totalMovementX + totalMovementY * totalMovementY);
+        if (totalMovementLength > 1f)
         {
-            Speed = speed;
+            totalMovementX /= totalMovementLength;
+            totalMovementY /= totalMovementLength;
         }
 
-        public override void Update(GameTime gameTime)
-        {
-            HandleInput(gameTime);
-            base.Update(gameTime);
-        }
+        // Calculate the movement vector without considering inertia
+        var movementVector = new Vector2(Speed * totalMovementX, Speed * totalMovementY);
 
-        private void HandleInput(GameTime gameTime)
-        {
-            var keyboardState = Keyboard.GetState();
-            var deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (keyboardState.IsKeyDown(Keys.Up))
-                Position = Position with { Y = Position.Y - (Speed * deltaTime) };
-
-            if (keyboardState.IsKeyDown(Keys.Down))
-                Position = Position with { Y = Position.Y + (Speed * deltaTime) };
-
-            if (keyboardState.IsKeyDown(Keys.Left))
-                Position = Position with { X = Position.X - (Speed * deltaTime) };
-
-            if (keyboardState.IsKeyDown(Keys.Right))
-                Position = Position with { X = Position.X + (Speed * deltaTime) };
-
-            if (Joystick.LastConnectedIndex != 0)
-                return;
-
-            var jState = Joystick.GetState((int)PlayerIndex.One);
-
-            var updatedBallSpeed = Speed * ((float)gameTime.ElapsedGameTime.TotalMilliseconds / 1000);
-
-            var axisX = jState.Axes[0] / 32768f;
-            var axisY = jState.Axes[1] / 32768f;
-
-            if (Math.Abs(axisY) > (DeadZone / 32768f))
-            {
-                Position = Position with { Y = Position.Y + (updatedBallSpeed * axisY) };
-            }
-
-            if (Math.Abs(axisX) > (DeadZone / 32768f))
-            {
-                Position = Position with { X = Position.X + (updatedBallSpeed * axisX) };
-            }
-        }
+        // Return the movement vector
+        return movementVector;
     }
 }

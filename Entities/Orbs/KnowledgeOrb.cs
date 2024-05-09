@@ -1,26 +1,21 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using NNN.Systems;
 
-namespace DirtBox.Entities.Orbs
+namespace NNN.Entities.Orbs;
+
+public class KnowledgeOrb : BaseOrb
 {
-    public class KnowledgeOrb : BaseOrb
+    public KnowledgeOrb(Texture2D texture, Vector2? initialPosition, Rectangle bounds, EventBus eventBus)
+        : base(texture, initialPosition, bounds, eventBus)
     {
-        public KnowledgeOrb(Texture2D texture, Vector2 initialPosition)
-            : base(texture, initialPosition)
-        {
-            
-        }
-
-        public override void Update(GameTime gameTime)
-        {
-            // Update behavior for the KnowledgeOrb if different from BaseOrb
-            base.Update(gameTime);
-        }
-
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            // Optionally, customize the drawing for KnowledgeOrb
-            base.Draw(spriteBatch);
-        }
+        Radius = 5f;
+    }
+    
+    public override void Update(GameTime gameTime)
+    {
+        // Update behavior for the KnowledgeOrb if different from BaseOrb
+        base.Update(gameTime);
     }
 }
