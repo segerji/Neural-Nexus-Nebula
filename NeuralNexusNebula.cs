@@ -4,7 +4,9 @@ using Myra;
 using NNN.Entities.Events;
 using NNN.Entities.Orbs;
 using NNN.Systems;
+using NNN.Systems.Services;
 using NNN.UI;
+using System.Diagnostics;
 
 namespace NNN;
 
@@ -38,6 +40,9 @@ public class NeuralNexusNebula : Game
 
     protected override void Initialize()
     {
+        Services.AddService<IDrawingService>(new DrawingService(GraphicsDevice));
+        Debug.WriteLine("DrawingService added.");
+
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         MyraEnvironment.Game = this;
         _viewportManager = new ViewportManager(_graphics, _spriteBatch);
@@ -51,23 +56,20 @@ public class NeuralNexusNebula : Game
 
     private void OnKnowledgeOrbSpawn(KnowledgeOrbSpawnEvent e)
     {
-        var knowledgeOrb = new KnowledgeOrb(_knowledgeOrbTexture, null, MovementBounds, _eventBus);
+        var knowledgeOrb = new KnowledgeOrb(MovementBounds, _eventBus);
+        knowledgeOrb.Initialize(_knowledgeOrbTexture, null);
         _gameObjectManager.AddEntity(knowledgeOrb);
     }
 
     protected override void LoadContent()
     {
+        var drawingService = (IDrawingService)Services.GetService(typeof(IDrawingService));
+        Debug.WriteLine("DrawingService read.");
         var orbTexture = Content.Load<Texture2D>("Textures/Orb_11");
         _knowledgeOrbTexture = Content.Load<Texture2D>("Textures/Orb_10");
 
-        var playerOrb = new PlayerOrb(
-            orbTexture,
-            new Vector2(MovementBounds.Width / 2f, MovementBounds.Height / 2f),
-            10f,
-            MovementBounds,
-            _eventBus
-        );
-
+        var playerOrb = new PlayerOrb(drawingService, MovementBounds, _eventBus);
+        playerOrb.Initialize(orbTexture, new Vector2(MovementBounds.Width / 2f, MovementBounds.Height / 2f), 10f);
         _gameObjectManager.AddEntity(playerOrb);
     }
 

@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using NNN.Entities;
+using NNN.Entities.Orbs;
 
 namespace NNN.Systems;
 
@@ -103,9 +105,41 @@ public class QuadTree
     public List<IEntity> Retrieve(List<IEntity> returnObjects, IEntity orb)
     {
         var index = GetIndex(orb);
-        if (index != -1 && _nodes[0] != null) _nodes[index].Retrieve(returnObjects, orb);
+        if (_nodes[0] != null)
+        {
+            // Retrieve entities from relevant nodes
+            if (index != -1)
+            {
+                _nodes[index].Retrieve(returnObjects, orb);
+            }
+
+            // Additional check to include nodes intersecting with the range
+            foreach (var node in _nodes)
+            {
+                if (node != null && NodeIntersectsRange(node, orb))
+                {
+                    node.Retrieve(returnObjects, orb);
+                }
+            }
+        }
 
         returnObjects.AddRange(_objects.Where(o => o != orb));
         return returnObjects;
     }
+
+    private bool NodeIntersectsRange(QuadTree node, IEntity orb)
+    {
+        if (orb is not AlienOrb alienOrb) return false;
+
+        var distance = DistanceToRectangle(alienOrb.Position, node._bounds);
+        return distance <= alienOrb.VisionRange;
+    }
+
+    private float DistanceToRectangle(Vector2 point, Rectangle rect)
+    {
+        var dx = Math.Max(rect.Left - point.X, Math.Max(0, point.X - rect.Right));
+        var dy = Math.Max(rect.Top - point.Y, Math.Max(0, point.Y - rect.Bottom));
+        return (float)Math.Sqrt(dx * dx + dy * dy);
+    }
+
 }

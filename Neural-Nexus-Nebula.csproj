@@ -37,6 +37,7 @@
     <Folder Include="Content\Shaders\" />
     <Folder Include="Content\Sounds\" />
     <Folder Include="GameStates\" />
+    <Folder Include="Systems\Services\" />
     <Folder Include="UI\" />
   </ItemGroup>
   <Target Name="RestoreDotnetTools" BeforeTargets="Restore">

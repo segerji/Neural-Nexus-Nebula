@@ -9,40 +9,49 @@ namespace NNN.Entities.Orbs;
 public abstract class BaseOrb : ICollidable
 {
     private const float InertiaFactor = 0.92f;
+    private readonly Rectangle _movementBounds;
     private readonly EventBus _eventBus;
-    private Rectangle _movementBounds;
     private static readonly Random Random = new();
 
     protected float RotationSpeed;
     protected float ScaleAmplitude;
 
-    protected BaseOrb(Texture2D texture, Vector2? initialPosition, Rectangle bounds, EventBus eventBus)
+    // Constructor now only includes dependencies necessary for the lifetime of the object
+    protected BaseOrb(Rectangle movementBounds, EventBus eventBus)
     {
-        Texture = texture;
-        Position = ComputeStartPosition(initialPosition, bounds);
+        _movementBounds = movementBounds;
+        _eventBus = eventBus;
         Rotation = 0f;
         Scale = 1.0f;
         RotationSpeed = 1.0f / 5;
         ScaleAmplitude = 0.05f;
         Velocity = Vector2.Zero;
-        _movementBounds = bounds;
-        _eventBus = eventBus;
-        Radius = Radius == 0 ? 20f : Radius;
+        Radius = 20f; // Default value set here
     }
 
-    public Texture2D Texture { get; protected set; }
-    public float Rotation { get; protected set; }
-    public float Scale { get; protected set; }
-    protected Vector2 Velocity { get; set; }
-    public float Radius { get; set; }
+    // Properties that need initialization or configuration
+    public Texture2D Texture { get; private set; }
+    public Vector2 Position { get; private set; }
+    public float Rotation { get; private set; }
+    public float Scale { get; private set; }
+    protected Vector2 Velocity { get; private set; }
+    public float Radius { get; protected set; }
 
-    private static Vector2 ComputeStartPosition(Vector2? initialPosition, Rectangle bounds)
+    // Initialize method for setting or resetting runtime-specific properties
+    public void Initialize(Texture2D texture, Vector2? initialPosition)
     {
-        if (initialPosition.HasValue) return initialPosition.Value;
+        Texture = texture;
+        Position = ComputeStartPosition(initialPosition);
+    }
+
+    private Vector2 ComputeStartPosition(Vector2? initialPosition)
+    {
+        if (initialPosition.HasValue)
+            return initialPosition.Value;
 
         return new Vector2(
-            bounds.X + Random.Next(bounds.Width),
-            bounds.Y + Random.Next(bounds.Height)
+            _movementBounds.X + Random.Next(_movementBounds.Width),
+            _movementBounds.Y + Random.Next(_movementBounds.Height)
         );
     }
 
@@ -51,9 +60,7 @@ public abstract class BaseOrb : ICollidable
         var distance = Vector2.Distance(Position, entity.Position);
         return distance < Radius + entity.Radius;
     }
-
-    public Vector2 Position { get; set; }
-
+    
     public virtual void Update(GameTime gameTime)
     {
         Update(gameTime, Vector2.Zero);

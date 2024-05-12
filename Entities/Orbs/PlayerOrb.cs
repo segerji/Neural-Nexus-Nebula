@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using NNN.Systems;
+using NNN.Systems.Services;
 
 namespace NNN.Entities.Orbs;
 
@@ -10,14 +11,12 @@ public class PlayerOrb : AlienOrb
 {
     private const int DeadZone = 4096;
 
-    public PlayerOrb(Texture2D texture, Vector2 initialPosition, float speed, Rectangle bounds, EventBus eventBus)
-        : base(texture, initialPosition, bounds, eventBus)
+    public PlayerOrb(IDrawingService drawingService, Rectangle bounds, EventBus eventBus)
+        : base(drawingService, bounds, eventBus)
     {
-        Speed = speed;
+        
     }
-
-    public float Speed { get; set; }
-
+    
     public override void Update(GameTime gameTime)
     {
         var movementVector = CalculateMovement();

@@ -26,11 +26,24 @@ public class CollisionManager
     public void CheckCollisions()
     {
         var collidables = _entities.OfType<AlienOrb>().ToList();
-        foreach (var entity in collidables)
+        foreach (var orb in collidables)
         {
             var potentialColliders = new List<IEntity>();
-            _quadTree.Retrieve(potentialColliders, entity);
-            foreach (var collidable in potentialColliders.OfType<ICollidable>()) entity.Intersects(collidable);
+            _quadTree.Retrieve(potentialColliders, orb);
+
+            // Check for actual range
+            var nearbyOrbs = potentialColliders.OfType<BaseOrb>()
+                .Where(o => Vector2.Distance(o.Position, orb.Position) <= orb.VisionRange)
+                .ToList();
+
+            // Do something with nearbyOrbs, like storing them in the orb
+            orb.VisibleOrbs = nearbyOrbs;
+
+            // Existing collision detection
+            foreach (var collidable in potentialColliders.OfType<ICollidable>())
+            {
+                orb.Intersects(collidable);
+            }
         }
     }
 }
