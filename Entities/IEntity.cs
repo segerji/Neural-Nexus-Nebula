@@ -8,6 +8,8 @@ public interface IEntity
     Vector2 Position { get; }
     void Update(GameTime gameTime);
     void Draw(SpriteBatch spriteBatch);
+
+    bool IsDisposed { get; }
 }
 
 public interface ICollidable : IEntity

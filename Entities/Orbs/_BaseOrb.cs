@@ -17,7 +17,7 @@ public abstract class BaseOrb : ICollidable
     private float _rotation;
 
     // Properties that need initialization or configuration
-    private Texture2D _texture;
+    public Texture2D Texture { get; private set; }
 
     // Constructor now only includes dependencies necessary for the lifetime of the object
     protected BaseOrb(Rectangle movementBounds, EventBus eventBus)
@@ -33,9 +33,11 @@ public abstract class BaseOrb : ICollidable
     }
 
     public float Scale { get; private set; }
-    protected Vector2 Velocity { get; private set; }
-    public Vector2 Position { get; private set; }
+    protected Vector2 Velocity { get; set; }
+    public Vector2 Position { get; protected set; }
     public float Radius { get; protected set; }
+
+    public bool IsDisposed { get; protected set; }
 
     public virtual bool Intersects(ICollidable entity)
     {
@@ -50,39 +52,39 @@ public abstract class BaseOrb : ICollidable
 
     public virtual void Draw(SpriteBatch spriteBatch)
     {
-        var scale = Scale * (2 * Radius / (_texture.Width * 0.6f));
+        var scale = Scale * (2 * Radius / (Texture.Width * 0.6f));
 
         spriteBatch.Draw(
-            _texture,
+            Texture,
             Position,
             null,
             new Color(0, 0, 0, 64),
             -_rotation * 0.2f,
-            new Vector2(_texture.Width / 2f, _texture.Height / 2f),
+            new Vector2(Texture.Width / 2f, Texture.Height / 2f),
             scale,
             SpriteEffects.None,
             0f
         );
 
         spriteBatch.Draw(
-            _texture,
+            Texture,
             Position,
             null,
             new Color(128, 128, 128, 32),
             _rotation + 128,
-            new Vector2(_texture.Width / 2f, _texture.Height / 2f),
+            new Vector2(Texture.Width / 2f, Texture.Height / 2f),
             scale,
             SpriteEffects.None,
             0f
         );
 
         spriteBatch.Draw(
-            _texture,
+            Texture,
             Position,
             null,
             new Color(128, 128, 128, 32),
             _rotation * 2,
-            new Vector2(_texture.Width / 2f, _texture.Height / 2f),
+            new Vector2(Texture.Width / 2f, Texture.Height / 2f),
             scale,
             SpriteEffects.None,
             0f
@@ -92,7 +94,7 @@ public abstract class BaseOrb : ICollidable
     // Initialize method for setting or resetting runtime-specific properties
     public void Initialize(Texture2D texture, Vector2? initialPosition)
     {
-        _texture = texture;
+        Texture = texture;
         Position = ComputeStartPosition(initialPosition);
     }
 
@@ -109,7 +111,11 @@ public abstract class BaseOrb : ICollidable
 
     public virtual void Destroy()
     {
-        _eventBus.Publish(new ObjectDestroyedEvent(this));
+        if (IsDisposed)
+            return;
+
+        IsDisposed = true;
+        _eventBus.Publish(new ObjectDestroyedEvent(this));        
     }
 
     public virtual void Update(GameTime gameTime, Vector2 movementVector)
@@ -126,23 +132,23 @@ public abstract class BaseOrb : ICollidable
         if (Position.X < MovementBounds.Left + Radius)
         {
             Position = Position with { X = MovementBounds.Left + Radius };
-            Velocity = Velocity with { X = -1 };
+            Velocity = Velocity with { X = Math.Abs(Velocity.X) }; // Reflect velocity in X direction
         }
         else if (Position.X > MovementBounds.Right - Radius)
         {
             Position = Position with { X = MovementBounds.Right - Radius };
-            Velocity = Velocity with { X = -1 };
+            Velocity = Velocity with { X = -Math.Abs(Velocity.X) }; // Reflect velocity in X direction
         }
 
         if (Position.Y < MovementBounds.Top + Radius)
         {
             Position = Position with { Y = MovementBounds.Top + Radius };
-            Velocity = Velocity with { Y = -1 };
+            Velocity = Velocity with { Y = Math.Abs(Velocity.Y) }; // Reflect velocity in Y direction
         }
         else if (Position.Y > MovementBounds.Bottom - Radius)
         {
             Position = Position with { Y = MovementBounds.Bottom - Radius };
-            Velocity = Velocity with { Y = -1 };
+            Velocity = Velocity with { Y = -Math.Abs(Velocity.Y) }; // Reflect velocity in Y direction
         }
     }
 }

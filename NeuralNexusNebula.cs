@@ -6,6 +6,8 @@ using NNN.Entities.Orbs;
 using NNN.Systems;
 using NNN.Systems.Services;
 using NNN.UI;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -22,10 +24,12 @@ public class NeuralNexusNebula : Game
     private EventBus _eventBus;
     private Texture2D _knowledgeOrbTexture;
     private Texture2D _alienOrbTexture;
+    private Texture2D _bestPerformingAlienOrbTexture;
+    private Texture2D _thirdGenerationAlienOrbTexture;
 
     private GeneticAlgorithm _geneticAlgorithm;
     private int _generation;
-    private int _generationLength = 300; // Number of frames per generation
+    private int _generationLength = 500; // Number of frames per generation
     private int _frameCount;
 
     public NeuralNexusNebula()
@@ -34,6 +38,7 @@ public class NeuralNexusNebula : Game
         _graphics.PreferredBackBufferWidth = 1600;
         _graphics.PreferredBackBufferHeight = 900;
         Content.RootDirectory = "Content";
+        this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 30d); //60);
         IsMouseVisible = true;
     }
 
@@ -63,7 +68,17 @@ public class NeuralNexusNebula : Game
         base.Initialize();
 
 
-        _geneticAlgorithm = new GeneticAlgorithm(0.03f, drawingService, MovementBounds, _eventBus, _alienOrbTexture);
+        _geneticAlgorithm = new GeneticAlgorithm(0.1f, drawingService, MovementBounds, _eventBus, _alienOrbTexture, _bestPerformingAlienOrbTexture, _thirdGenerationAlienOrbTexture);
+
+        var topPerformers = _geneticAlgorithm.LoadTopPerformers();
+        if (topPerformers != null && topPerformers.Count > 0)
+        {
+            foreach (var topPerformer in topPerformers)
+            {
+                _gameObjectManager.AddEntity(topPerformer);
+            }
+        }
+
         SpawnInitialPopulation();
 
         _generation = 1;
@@ -72,12 +87,12 @@ public class NeuralNexusNebula : Game
 
     private void SpawnInitialPopulation()
     {
-        for (int i = 0; i < 24; i++)
+        for (int i = 0; i < 50; i++)
         {
             _eventBus.Publish(new AlienOrbSpawnEvent());
         }
 
-        for (int i = 0; i < 200; i++)
+        for (int i = 0; i < 100; i++)
         {
             _eventBus.Publish(new KnowledgeOrbSpawnEvent());
         }
@@ -96,7 +111,7 @@ public class NeuralNexusNebula : Game
     {
         var knowledgeOrb = new KnowledgeOrb(MovementBounds, _eventBus);
         knowledgeOrb.Initialize(_knowledgeOrbTexture, null);
-        _gameObjectManager.AddEntity(knowledgeOrb);
+        _gameObjectManager.AddEntity(knowledgeOrb);        
     }
 
     protected override void LoadContent()
@@ -105,10 +120,12 @@ public class NeuralNexusNebula : Game
         Debug.WriteLine("DrawingService read.");
         _alienOrbTexture = Content.Load<Texture2D>("Textures/Orb_11");
         _knowledgeOrbTexture = Content.Load<Texture2D>("Textures/Orb_10");
+        _bestPerformingAlienOrbTexture = Content.Load<Texture2D>("Textures/Orb_09");
+        _thirdGenerationAlienOrbTexture = Content.Load<Texture2D>("Textures/Orb_07");
 
-        var playerOrb = new PlayerOrb(drawingService, MovementBounds, _eventBus);
-        playerOrb.Initialize(_alienOrbTexture, new Vector2(MovementBounds.Width / 2f, MovementBounds.Height / 2f), 10f);
-        _gameObjectManager.AddEntity(playerOrb);
+        //var playerOrb = new PlayerOrb(drawingService, MovementBounds, _eventBus);
+        //playerOrb.Initialize(_alienOrbTexture, new Vector2(MovementBounds.Width / 2f, MovementBounds.Height / 2f), 10f);
+        //_gameObjectManager.AddEntity(playerOrb);
     }
 
     protected override void Update(GameTime gameTime)
@@ -116,32 +133,41 @@ public class NeuralNexusNebula : Game
         _backgroundManager.Update(gameTime);
         _gameObjectManager.Update(gameTime);
         base.Update(gameTime);
-        
+
         _frameCount++;
         if (_frameCount >= _generationLength)
         {
-            var alienOrbs = _gameObjectManager.Entities.OfType<AlienOrb>().ToList();
-            foreach (var alienOrb in alienOrbs)
-            {
-                _gameObjectManager.RemoveEntity(alienOrb);
-            }
-
             var knowledgeOrbs = _gameObjectManager.Entities.OfType<KnowledgeOrb>().ToList();
             foreach (var knowledgeOrb in knowledgeOrbs)
             {
                 _gameObjectManager.RemoveEntity(knowledgeOrb);
             }
 
-            for (int i = 0; i < 200; i++)
+            var highScore = 0f;
+            var alienOrbs = _gameObjectManager.Entities.OfType<AlienOrb>().ToList();
+            foreach (var alienOrb in alienOrbs)
+            {
+                if (alienOrb.KnowledgeScore > highScore)
+                {
+                    highScore = alienOrb.KnowledgeScore;
+                }
+            }
+
+            _eventBus.Publish(new NewHighestScoreEvent { HighScore = highScore });
+
+            var newAlienOrbs = _geneticAlgorithm.Evolve(alienOrbs);
+            for (int i = 0; i < alienOrbs.Count; i++)
+            {
+                var oldAlienOrb = alienOrbs[i];
+                var newAlienOrb = newAlienOrbs[i];
+                oldAlienOrb.Reset(newAlienOrb.Brain, newAlienOrb.Texture);
+            }
+
+            for (int i = 0; i < 100; i++)
             {
                 _eventBus.Publish(new KnowledgeOrbSpawnEvent());
             }
 
-            var newAlienOrbs = _geneticAlgorithm.Evolve(alienOrbs);
-            foreach (var alienOrb in newAlienOrbs)
-            {
-                _gameObjectManager.AddEntity(alienOrb);
-            }
             _generation++;
             _generationLength += 1;
             _frameCount = 0;

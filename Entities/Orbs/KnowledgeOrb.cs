@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using NNN.Entities.Events;
 using NNN.Systems;
 
 namespace NNN.Entities.Orbs;
@@ -15,5 +16,11 @@ public class KnowledgeOrb : BaseOrb
     {
         // Update behavior for the KnowledgeOrb if different from BaseOrb
         base.Update(gameTime);
+    }
+
+    public override void Destroy()
+    {
+        base.Destroy();
+        _eventBus.Publish(new KnowledgeOrbSpawnEvent());
     }
 }

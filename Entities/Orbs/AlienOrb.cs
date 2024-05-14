@@ -2,145 +2,165 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using NNN.Entities.Events;
 using NNN.Systems;
 using NNN.Systems.Services;
 
-namespace NNN.Entities.Orbs;
-
-public class AlienOrb : BaseOrb
+namespace NNN.Entities.Orbs
 {
-    private const int MaxVisibleOrbs = 5;
-    private readonly IDrawingService _drawingService;
-
-    private static int BrainInputSize => 1 + 2 + 2 + (MaxVisibleOrbs * 2);
-
-    public AlienOrb(IDrawingService drawingService, Rectangle bounds, EventBus eventBus)
-        : base(bounds, eventBus)
+    public class AlienOrb : BaseOrb
     {
-        _drawingService = drawingService;
-        VisionRange = 200f;
-        Brain = new OrbBrain(BrainInputSize, 2, new[] { BrainInputSize, Convert.ToInt32(BrainInputSize/2f) });
-    }
-    
+        private readonly IDrawingService _drawingService;
+        public static int NumRays = 16;
+        private static int BrainInputSize => (NumRays); // Adjust input size for rays
 
-    public OrbBrain Brain { get; set; }
-    public List<KnowledgeOrb> VisibleKnowledgeOrbs { get; set; } = new();
-    public AlienOrb ClosestAlienOrb { get; set; }
-    public float Speed { get; set; } // How fast the orb can move
-    public float VisionRange { get; set; } // How far the orb can see other entities
-    public float KnowledgeScore { get; private set; }
-
-    public void Initialize(Texture2D texture, Vector2? initialPosition, float speed)
-    {
-        Speed = speed;
-        base.Initialize(texture, initialPosition);
-    }
-
-    public override void Update(GameTime gameTime)
-    {
-        var inputs = GatherInputs();
-        var output = Brain.Predict(inputs);
-        var movementVector = new Vector2(output[0], output[1]);
-
-        movementVector.Normalize();
-
-        var preMovePosition = new Vector2(Position.X, Position.Y);
-
-        base.Update(gameTime, movementVector * Speed);
-
-        var postMovePosition = new Vector2(Position.X, Position.Y);
-
-        if (preMovePosition != postMovePosition) KnowledgeScore += 0.01f;
-
-        PunishForEdges(postMovePosition);
-    }
-
-    private void PunishForEdges(Vector2 position)
-    {
-        if (IsTouchingWall(position))
+        public AlienOrb(IDrawingService drawingService, Rectangle bounds, EventBus eventBus)
+            : base(bounds, eventBus)
         {
-            KnowledgeScore -= 0.20f;
-        }
-    }
-
-    private bool IsTouchingWall(Vector2 position)
-    {
-        return position.X - Radius <= MovementBounds.Left ||
-               position.X + Radius >= MovementBounds.Right ||
-               position.Y - Radius <= MovementBounds.Top ||
-               position.Y + Radius >= MovementBounds.Bottom;
-    }
-
-    public override void Draw(SpriteBatch spriteBatch)
-    {
-        base.Draw(spriteBatch);
-        // TODO : show when debugging
-        //_drawingService.DrawCircle(spriteBatch, Position, VisionRange, Color.Red);
-        //foreach (var orb in VisibleKnowledgeOrbs)
-        //    _drawingService.DrawLine(spriteBatch, Position, orb.Position, Color.Yellow);
-    }
-
-    private float[] GatherInputs()
-    {
-        var inputs = new List<float>();
-
-        inputs.Add(IsTouchingWall(Position) ? 1 : 0);
-
-        var normalizedX = Position.X / MovementBounds.Width;
-        var normalizedY = Position.Y / MovementBounds.Height;
-
-        inputs.Add(normalizedX);
-        inputs.Add(normalizedY);
-
-        var normalizedClosestAlienOrbX = -1.0f;
-        var normalizedClosestAlienOrbY = -1.0f;
-
-        if (ClosestAlienOrb != null){
-            normalizedClosestAlienOrbX = ClosestAlienOrb.Position.X / MovementBounds.Width;
-            normalizedClosestAlienOrbY = ClosestAlienOrb.Position.Y / MovementBounds.Height;
+            _drawingService = drawingService;
+            VisionRange = 100f;
+            Brain = new OrbBrain(BrainInputSize, 2, new int[] { 4 });
         }
 
-        inputs.Add(normalizedClosestAlienOrbX);
-        inputs.Add(normalizedClosestAlienOrbY);
+        public OrbBrain Brain { get; set; }
+        public List<RaycastHit> Rays { get; set; } = new();
 
-        foreach (var orb in VisibleKnowledgeOrbs)
+        public float Speed { get; set; }
+        public float VisionRange { get; set; }
+        public float KnowledgeScore { get; private set; }
+
+        public void Initialize(Texture2D texture, Vector2? initialPosition, float speed)
         {
-            var visibleKnowledgeOrbNormalizedX = orb.Position.X / MovementBounds.Width;
-            var visibleKnowledgeOrbNormalizedY = orb.Position.Y / MovementBounds.Height;
-
-            visibleKnowledgeOrbNormalizedX = Math.Clamp(visibleKnowledgeOrbNormalizedX, 0.0f, 1.0f);
-            visibleKnowledgeOrbNormalizedY = Math.Clamp(visibleKnowledgeOrbNormalizedY, 0.0f, 1.0f);
-
-            inputs.Add(visibleKnowledgeOrbNormalizedX);
-            inputs.Add(visibleKnowledgeOrbNormalizedY);
+            Speed = speed;
+            base.Initialize(texture, initialPosition);
         }
 
-        while (inputs.Count < BrainInputSize)
+        public new void Initialize(Texture2D texture, Vector2? initialPosition)
         {
-            inputs.Add(-1);
-            inputs.Add(-1);
+            Speed = 10f;
+            base.Initialize(texture, initialPosition);
         }
 
-        return inputs.ToArray();
-    }
-
-    public override bool Intersects(ICollidable entity)
-    {
-        if (!base.Intersects(entity))
-            return false;
-
-        switch (entity)
+        public override void Update(GameTime gameTime)
         {
-            case KnowledgeOrb orb:
-                KnowledgeScore++;
-                orb.Destroy();
-                break;
-            case AlienOrb:
-                KnowledgeScore -= 0.20f;
-                break;
+            var inputs = GatherInputs();
+            var output = Brain.Predict(inputs);
+            var movementVector = new Vector2(output[0], output[1]);
+
+            movementVector.Normalize();
+
+            base.Update(gameTime, movementVector * Speed);
+
+            KnowledgeScore -= 0.05f;
+
+            PunishForEdges();
         }
 
-        return true;
+        private float[] GatherInputs()
+        {
+            var inputs = new List<float>();
+
+            //// Check if the AlienOrb is touching a wall
+            //inputs.Add(IsTouchingWall() ? 1 : 0);
+
+            //// AlienOrb's position normalized within the movement bounds
+            //var normalizedX = Position.X / MovementBounds.Width;
+            //var normalizedY = Position.Y / MovementBounds.Height;
+
+            //inputs.Add(normalizedX);
+            //inputs.Add(normalizedY);
+
+            //var velocity = new Vector2(Velocity.X, Velocity.Y);
+            //if (velocity.X != 0 || velocity.Y != 0)
+            //{
+            //    velocity.Normalize();
+            //}
+            //inputs.Add(velocity.X);
+            //inputs.Add(velocity.Y);
+
+            // Add the ray distances normalized within vision range
+     
+            for(int i = 0; i < NumRays; i++)
+            {
+                try { 
+                    var ray = Rays[i];
+                    inputs.Add(ray.Distance / VisionRange);
+                }
+                catch
+                {
+                    inputs.Add(1);
+                }
+            }
+
+            return inputs.ToArray();
+        }
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            base.Draw(spriteBatch);
+            // TODO : show when debugging
+            //_drawingService.DrawCircle(spriteBatch, Position, VisionRange, Color.Red);
+            foreach (var ray in Rays)
+                _drawingService.DrawLine(spriteBatch, Position, ray.Position, new Color(255, 255, 0, 100));
+        }
+
+        public override bool Intersects(ICollidable entity)
+        {
+            if (!base.Intersects(entity))
+                return false;
+
+            switch (entity)
+            {
+                case KnowledgeOrb orb:
+                    KnowledgeScore += 3;
+                    orb.Destroy();
+                    break;
+            }
+
+            return true;
+        }
+
+        public void ResolveCollisionWithOtherOrb(AlienOrb otherOrb)
+        {
+            var distance = Vector2.Distance(Position, otherOrb.Position);
+            var overlap = Radius + otherOrb.Radius - distance;
+
+            if (overlap > 0)
+            {
+                //KnowledgeScore -= 0.20f;
+
+                // Calculate the direction of the collision
+                var collisionDirection = Vector2.Normalize(Position - otherOrb.Position);
+
+                // Resolve the collision by moving the orbs away from each other
+                Position += collisionDirection * overlap / 2;
+                otherOrb.Position -= collisionDirection * overlap / 2;
+
+                // Reflect the velocities
+                Velocity = Vector2.Reflect(Velocity, collisionDirection);
+                otherOrb.Velocity = Vector2.Reflect(otherOrb.Velocity, -collisionDirection);
+            }
+        }
+
+        private void PunishForEdges()
+        {
+            if (IsTouchingWall())
+            {
+                KnowledgeScore -= 0.50f;
+            }
+        }
+        private bool IsTouchingWall()
+        {
+            return Position.X - Radius <= MovementBounds.Left ||
+                   Position.X + Radius >= MovementBounds.Right ||
+                   Position.Y - Radius <= MovementBounds.Top ||
+                   Position.Y + Radius >= MovementBounds.Bottom;
+        }
+
+        public void Reset(OrbBrain newBrain, Texture2D texture)
+        {
+            Brain = newBrain;
+            KnowledgeScore = 0;
+            base.Initialize(texture, null);
+        }
     }
 }
