@@ -10,17 +10,17 @@ namespace NNN.Systems;
 public class GameObjectManager
 {
     private readonly CollisionManager _collisionManager;
-    private readonly List<IEntity> _entities = new();
+    public readonly List<IEntity> Entities = new();
 
     public GameObjectManager(EventBus eventBus, Rectangle bounds)
     {
-        _collisionManager = new CollisionManager(bounds, ref _entities);
+        _collisionManager = new CollisionManager(bounds, ref Entities);
         eventBus.Subscribe<ObjectDestroyedEvent>(HandleEntityDestroyed);
     }
 
     public void AddEntity(IEntity entity)
     {
-        _entities.Add(entity);
+        Entities.Add(entity);
     }
 
     private void HandleEntityDestroyed(ObjectDestroyedEvent eventMessage)
@@ -30,18 +30,18 @@ public class GameObjectManager
 
     public void RemoveEntity(IEntity entity)
     {
-        _entities.Remove(entity);
+        Entities.Remove(entity);
     }
 
     public void Update(GameTime gameTime)
     {
-        foreach (var entity in _entities) entity.Update(gameTime);
+        foreach (var entity in Entities) entity.Update(gameTime);
         _collisionManager.Update(gameTime);
         _collisionManager.CheckCollisions();
     }
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        foreach (var entity in _entities) entity.Draw(spriteBatch);
+        foreach (var entity in Entities) entity.Draw(spriteBatch);
     }
 }

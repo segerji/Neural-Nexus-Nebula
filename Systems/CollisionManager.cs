@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using NNN.Entities;
@@ -31,15 +32,21 @@ public class CollisionManager
             var potentialColliders = new List<IEntity>();
             _quadTree.Retrieve(potentialColliders, orb);
 
-            // Check for actual range
-            var nearbyOrbs = potentialColliders.OfType<BaseOrb>()
+            var nearbyKnowledgeOrbs = potentialColliders.OfType<KnowledgeOrb>()
                 .Where(o => Vector2.Distance(o.Position, orb.Position) <= orb.VisionRange)
+                .Distinct()
+                .OrderBy(o => Vector2.Distance(o.Position, orb.Position))
+                .Take(5)
                 .ToList();
 
-            // Do something with nearbyOrbs, like storing them in the orb
-            orb.VisibleOrbs = nearbyOrbs;
+            var closestAlienOrb = potentialColliders.OfType<AlienOrb>()
+                .Where(o => Vector2.Distance(o.Position, orb.Position) <= orb.VisionRange)
+                .Distinct()
+                .MinBy(o => Vector2.Distance(o.Position, orb.Position));
 
-            // Existing collision detection
+            orb.VisibleKnowledgeOrbs = new List<KnowledgeOrb>(nearbyKnowledgeOrbs);
+            orb.ClosestAlienOrb = closestAlienOrb;
+
             foreach (var collidable in potentialColliders.OfType<ICollidable>())
             {
                 orb.Intersects(collidable);

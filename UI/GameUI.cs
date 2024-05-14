@@ -19,22 +19,30 @@ public class GameUI
 
     private void SetupUI()
     {
-        var button = Button.CreateTextButton("click me");
+        var spawnKnowledgeButton = Button(10,10, "New Knowledge Orb", new KnowledgeOrbSpawnEvent { Position = new Vector2(100, 100) });
+        var spawnAlienButton = Button(60, 10, "New Alien Orb", new AlienOrbSpawnEvent { Position = new Vector2(100, 100) });
+        
+        _desktop.Widgets.Add(spawnKnowledgeButton);
+        _desktop.Widgets.Add(spawnAlienButton);
+    }
 
-        button.Width = 100;
+    private Button Button<T>(int top, int left, string buttonTitle, T eventMessage)
+    {
+        var button = Myra.Graphics2D.UI.Button.CreateTextButton(buttonTitle);
+        
+        button.Width = 180;
         button.Height = 40;
-        button.Left = 10;
-        button.Top = 10;
+        button.Left = left;
+        button.Top = top;
 
         button.Content.HorizontalAlignment = HorizontalAlignment.Center;
         button.Content.VerticalAlignment = VerticalAlignment.Center;
 
         button.Click += (s, a) =>
         {
-            _eventBus.Publish(new KnowledgeOrbSpawnEvent { Position = new Vector2(100, 100) });
+            _eventBus.Publish(eventMessage);
         };
-
-        _desktop.Widgets.Add(button);
+        return button;
     }
 
     public void Draw()

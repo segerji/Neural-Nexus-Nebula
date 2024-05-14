@@ -7,6 +7,7 @@ using NNN.Systems;
 using NNN.Systems.Services;
 using NNN.UI;
 using System.Diagnostics;
+using System.Linq;
 
 namespace NNN;
 
@@ -20,6 +21,12 @@ public class NeuralNexusNebula : Game
     private GameUI _gameUI;
     private EventBus _eventBus;
     private Texture2D _knowledgeOrbTexture;
+    private Texture2D _alienOrbTexture;
+
+    private GeneticAlgorithm _geneticAlgorithm;
+    private int _generation;
+    private int _generationLength = 300; // Number of frames per generation
+    private int _frameCount;
 
     public NeuralNexusNebula()
     {
@@ -40,7 +47,8 @@ public class NeuralNexusNebula : Game
 
     protected override void Initialize()
     {
-        Services.AddService<IDrawingService>(new DrawingService(GraphicsDevice));
+        var drawingService = new DrawingService(GraphicsDevice);
+        Services.AddService<IDrawingService>(drawingService);
         Debug.WriteLine("DrawingService added.");
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
@@ -51,7 +59,37 @@ public class NeuralNexusNebula : Game
         _backgroundManager = new BackgroundManager(Content);
         _gameUI = new GameUI(_eventBus);
         _eventBus.Subscribe<KnowledgeOrbSpawnEvent>(OnKnowledgeOrbSpawn);
+        _eventBus.Subscribe<AlienOrbSpawnEvent>(OnAlienOrbSpawn);
         base.Initialize();
+
+
+        _geneticAlgorithm = new GeneticAlgorithm(0.03f, drawingService, MovementBounds, _eventBus, _alienOrbTexture);
+        SpawnInitialPopulation();
+
+        _generation = 1;
+        _frameCount = 0;
+    }
+
+    private void SpawnInitialPopulation()
+    {
+        for (int i = 0; i < 24; i++)
+        {
+            _eventBus.Publish(new AlienOrbSpawnEvent());
+        }
+
+        for (int i = 0; i < 200; i++)
+        {
+            _eventBus.Publish(new KnowledgeOrbSpawnEvent());
+        }
+
+    }
+
+    private void OnAlienOrbSpawn(AlienOrbSpawnEvent obj)
+    {
+        var drawingService = (IDrawingService)Services.GetService(typeof(IDrawingService));
+        var alienOrb = new AlienOrb(drawingService, MovementBounds, _eventBus);
+        alienOrb.Initialize(_alienOrbTexture, null, 10);
+        _gameObjectManager.AddEntity(alienOrb);
     }
 
     private void OnKnowledgeOrbSpawn(KnowledgeOrbSpawnEvent e)
@@ -65,11 +103,11 @@ public class NeuralNexusNebula : Game
     {
         var drawingService = (IDrawingService)Services.GetService(typeof(IDrawingService));
         Debug.WriteLine("DrawingService read.");
-        var orbTexture = Content.Load<Texture2D>("Textures/Orb_11");
+        _alienOrbTexture = Content.Load<Texture2D>("Textures/Orb_11");
         _knowledgeOrbTexture = Content.Load<Texture2D>("Textures/Orb_10");
 
         var playerOrb = new PlayerOrb(drawingService, MovementBounds, _eventBus);
-        playerOrb.Initialize(orbTexture, new Vector2(MovementBounds.Width / 2f, MovementBounds.Height / 2f), 10f);
+        playerOrb.Initialize(_alienOrbTexture, new Vector2(MovementBounds.Width / 2f, MovementBounds.Height / 2f), 10f);
         _gameObjectManager.AddEntity(playerOrb);
     }
 
@@ -78,6 +116,36 @@ public class NeuralNexusNebula : Game
         _backgroundManager.Update(gameTime);
         _gameObjectManager.Update(gameTime);
         base.Update(gameTime);
+        
+        _frameCount++;
+        if (_frameCount >= _generationLength)
+        {
+            var alienOrbs = _gameObjectManager.Entities.OfType<AlienOrb>().ToList();
+            foreach (var alienOrb in alienOrbs)
+            {
+                _gameObjectManager.RemoveEntity(alienOrb);
+            }
+
+            var knowledgeOrbs = _gameObjectManager.Entities.OfType<KnowledgeOrb>().ToList();
+            foreach (var knowledgeOrb in knowledgeOrbs)
+            {
+                _gameObjectManager.RemoveEntity(knowledgeOrb);
+            }
+
+            for (int i = 0; i < 200; i++)
+            {
+                _eventBus.Publish(new KnowledgeOrbSpawnEvent());
+            }
+
+            var newAlienOrbs = _geneticAlgorithm.Evolve(alienOrbs);
+            foreach (var alienOrb in newAlienOrbs)
+            {
+                _gameObjectManager.AddEntity(alienOrb);
+            }
+            _generation++;
+            _generationLength += 1;
+            _frameCount = 0;
+        }
     }
 
     protected override void Draw(GameTime gameTime)

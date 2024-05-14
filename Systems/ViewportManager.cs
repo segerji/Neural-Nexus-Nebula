@@ -5,9 +5,9 @@ namespace NNN.Systems;
 
 public class ViewportManager
 {
-    private const int BorderWidth = 2;
+    private const int BorderWidth = 4;
     private const int MarginHorizontal = 200;
-    private const int MarginVertical = 4;
+    private const int MarginVertical = (2*BorderWidth) + 50;
 
     private readonly GraphicsDeviceManager _graphics;
     private readonly SpriteBatch _spriteBatch;
@@ -26,7 +26,7 @@ public class ViewportManager
     private void CreateBorderTexture()
     {
         _borderTexture = new Texture2D(_graphics.GraphicsDevice, 1, 1);
-        _borderTexture.SetData(new[] { Color.White }); // Solid color for border
+        _borderTexture.SetData(new[] { new Color(100,100,100,100) }); // Solid color for border
     }
 
     private void UpdateViewports()
@@ -69,12 +69,12 @@ public class ViewportManager
 
         // Draw border around the gameplay viewport
         Rectangle borderRect = new Rectangle(_gameplayViewport.X - BorderWidth, _gameplayViewport.Y - BorderWidth,
-                                             _gameplayViewport.Width + 2 * BorderWidth, BorderWidth);
+                                             _gameplayViewport.Width + BorderWidth, BorderWidth);
         _spriteBatch.Draw(_borderTexture, borderRect, Color.White);
         _spriteBatch.Draw(_borderTexture, new Rectangle(borderRect.X, _gameplayViewport.Y + _gameplayViewport.Height,
                                                         borderRect.Width, BorderWidth), Color.White);
-        _spriteBatch.Draw(_borderTexture, new Rectangle(borderRect.X, borderRect.Y, BorderWidth,
-                                                        _gameplayViewport.Height + 2 * BorderWidth), Color.White);
+        _spriteBatch.Draw(_borderTexture, new Rectangle(borderRect.X, borderRect.Y + BorderWidth, BorderWidth,
+                                                        _gameplayViewport.Height), Color.White);
         _spriteBatch.Draw(_borderTexture, new Rectangle(_gameplayViewport.X + _gameplayViewport.Width, borderRect.Y,
                                                         BorderWidth, _gameplayViewport.Height + 2 * BorderWidth), Color.White);
 
