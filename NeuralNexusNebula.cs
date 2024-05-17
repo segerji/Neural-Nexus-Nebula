@@ -142,9 +142,9 @@ public class NeuralNexusNebula : Game
             {
                 _gameObjectManager.RemoveEntity(knowledgeOrb);
             }
-
-            var highScore = 0f;
+                        
             var alienOrbs = _gameObjectManager.Entities.OfType<AlienOrb>().ToList();
+            var highScore = alienOrbs.FirstOrDefault().KnowledgeScore;
             foreach (var alienOrb in alienOrbs)
             {
                 if (alienOrb.KnowledgeScore > highScore)

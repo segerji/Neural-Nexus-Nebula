@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using NNN.Systems;
@@ -42,17 +43,26 @@ namespace NNN.Entities.Orbs
 
         public override void Update(GameTime gameTime)
         {
-            var inputs = GatherInputs();
-            var output = Brain.Predict(inputs);
-            var movementVector = new Vector2(output[0], output[1]);
+            try
+            {
+                var inputs = GatherInputs();
+                var output = Brain.Predict(inputs);
+                var movementVector = new Vector2(output[0], output[1]);
 
-            movementVector.Normalize();
+                if (movementVector.X != 0 || movementVector.Y != 0)
+                {
+                    movementVector.Normalize();
+                }
 
-            base.Update(gameTime, movementVector * Speed);
+                base.Update(gameTime, movementVector * Speed);
 
-            KnowledgeScore -= 0.05f;
+                KnowledgeScore -= 0.05f;
 
-            PunishForEdges();
+                PunishForEdges();
+            }
+            catch (Exception e) { 
+                Debug.Write(e.ToString());
+            }
         }
 
         private float[] GatherInputs()
@@ -83,11 +93,19 @@ namespace NNN.Entities.Orbs
             {
                 try { 
                     var ray = Rays[i];
-                    inputs.Add(ray.Distance / VisionRange);
+                    if (ray.Distance < VisionRange) 
+                    { 
+                        inputs.Add(ray.Distance / VisionRange);
+                    }
+                    else
+                    {
+                        inputs.Add(0);
+                    }
+                    
                 }
                 catch
                 {
-                    inputs.Add(1);
+                    inputs.Add(0);
                 }
             }
 
